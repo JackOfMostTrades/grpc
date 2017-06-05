@@ -449,6 +449,7 @@ typedef struct {
   tsi_ssl_client_handshaker_factory *handshaker_factory;
   char *target_name;
   char *overridden_target_name;
+  const verify_peer_options* verify_options;
 } grpc_ssl_channel_security_connector;
 
 typedef struct {
@@ -486,10 +487,19 @@ static void ssl_channel_add_handshakers(grpc_exec_ctx *exec_ctx,
       (grpc_ssl_channel_security_connector *)sc;
   // Instantiate TSI handshaker.
   tsi_handshaker *tsi_hs = NULL;
+  const char* server_name_indication;
+
+  if (c->verify_options->skip_hostname_verification) {
+    server_name_indication = nullptr;
+  } else {
+    server_name_indication = c->overridden_target_name != nullptr
+        ? c->overridden_target_name
+        : c->target_name;
+  }
+
   tsi_result result = tsi_ssl_client_handshaker_factory_create_handshaker(
       c->handshaker_factory,
-      c->overridden_target_name != NULL ? c->overridden_target_name
-                                        : c->target_name,
+      server_name_indication,
       &tsi_hs);
   if (result != TSI_OK) {
     gpr_log(GPR_ERROR, "Handshaker creation failed with error %s.",
@@ -613,10 +623,33 @@ static void ssl_channel_check_peer(grpc_exec_ctx *exec_ctx,
                                    grpc_closure *on_peer_checked) {
   grpc_ssl_channel_security_connector *c =
       (grpc_ssl_channel_security_connector *)sc;
-  grpc_error *error = ssl_check_peer(sc, c->overridden_target_name != NULL
-                                             ? c->overridden_target_name
-                                             : c->target_name,
-                                     &peer, auth_context);
+  const char* target_name;
+  if (c->verify_options->skip_hostname_verification) {
+    target_name = NULL;
+  } else {
+    target_name = c->overridden_target_name != NULL
+       ? c->overridden_target_name
+       : c->target_name;
+  }
+  grpc_error* error = ssl_check_peer(sc, target_name, &peer, auth_context);
+  if (error == GRPC_ERROR_NONE && c->verify_options->verify_peer_callback != NULL) {
+    const tsi_peer_property *p =
+            tsi_peer_get_property_by_name(&peer, TSI_X509_PEM_CERT_PROPERTY);
+    if (p == NULL) {
+      error = GRPC_ERROR_CREATE_FROM_STATIC_STRING(
+              "Cannot check peer: missing pem cert property.");
+    } else {
+      char* peer_pem = (char*)gpr_malloc(p->value.length + 1);
+      memcpy(peer_pem, p->value.data, p->value.length);
+      peer_pem[p->value.length] = '\0';
+      int callback_status = c->verify_options->verify_peer_callback(target_name, peer_pem,
+                                                                    c->verify_options->verify_peer_callback_userdata);
+      gpr_free(peer_pem);
+      if (callback_status) {
+        error = GRPC_ERROR_CREATE_FROM_STATIC_STRING("Verify peer callback returned a failure.");
+      }
+    }
+  }
   grpc_closure_sched(exec_ctx, on_peer_checked, error);
   tsi_peer_destruct(&peer);
 }
@@ -688,6 +721,9 @@ static void ssl_channel_check_call_host(grpc_exec_ctx *exec_ctx,
   /* If the target name was overridden, then the original target_name was
      'checked' transitively during the previous peer check at the end of the
      handshake. */
+  if (c->verify_options->skip_hostname_verification) {
+    status = GRPC_SECURITY_OK;
+  }
   if (c->overridden_target_name != NULL && strcmp(host, c->target_name) == 0) {
     status = GRPC_SECURITY_OK;
   }
@@ -827,6 +863,7 @@ grpc_security_status grpc_ssl_channel_security_connector_create(
   if (overridden_target_name != NULL) {
     c->overridden_target_name = gpr_strdup(overridden_target_name);
   }
+  c->verify_options = &config->verify_options;
 
   bool has_key_cert_pair = config->pem_key_cert_pair.private_key != NULL &&
                            config->pem_key_cert_pair.cert_chain != NULL;
