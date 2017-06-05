@@ -168,6 +168,7 @@ typedef struct {
     int (*verify_peer_callback)(const char*, const char*, void*);
     void *verify_peer_callback_userdata;
     void (*verify_peer_destruct)(void*);
+    bool skip_hostname_verification;
 } verify_peer_options;
 
 /** Creates an SSL credentials object.
