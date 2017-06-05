@@ -461,6 +461,7 @@ cdef extern from "grpc/grpc_security.h":
     int (*verify_peer_callback)(const char*, const char*, void*)
     void *verify_peer_callback_userdata
     void (*verify_peer_destruct)(void*)
+    bint skip_hostname_verification
 
   ctypedef void (*grpc_ssl_roots_override_callback)(char **pem_root_certs)
 

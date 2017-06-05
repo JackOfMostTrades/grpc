@@ -24,6 +24,7 @@
 #include <grpc/grpc.h>
 #include <grpc/grpc_security_constants.h>
 #include <grpc/status.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -181,6 +182,8 @@ typedef struct {
      cleaned up. The userdata argument will be passed to it. The intent is
      to perform any cleanup associated with that userdata. */
   void (*verify_peer_destruct)(void* userdata);
+
+  bool skip_hostname_verification;
 } verify_peer_options;
 
 /** Creates an SSL credentials object.
