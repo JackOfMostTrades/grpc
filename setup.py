@@ -330,7 +330,7 @@ PACKAGE_DATA = {
 PACKAGES = setuptools.find_packages(PYTHON_STEM)
 
 setuptools.setup(
-  name='grpcio',
+  name='nflx-grpcio',
   version=grpc_version.VERSION,
   description='HTTP/2-based RPC framework',
   author='The gRPC Authors',
