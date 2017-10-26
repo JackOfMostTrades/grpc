@@ -281,7 +281,7 @@ static grpc_channel_credentials *read_ssl_channel_creds(input_stream *inp) {
   grpc_ssl_pem_key_cert_pair key_cert_pair = {private_key, certs};
   grpc_channel_credentials *creds = grpc_ssl_credentials_create(
       root_certs, private_key != NULL && certs != NULL ? &key_cert_pair : NULL,
-      NULL);
+      NULL, NULL);
   cred_artifact_ctx_finish(&ctx);
   return creds;
 }

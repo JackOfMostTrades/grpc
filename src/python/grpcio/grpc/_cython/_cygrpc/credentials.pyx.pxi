@@ -177,12 +177,12 @@ def channel_credentials_ssl(pem_root_certificates,
   if ssl_pem_key_cert_pair is not None:
     with nogil:
       credentials.c_credentials = grpc_ssl_credentials_create(
-          c_pem_root_certificates, &ssl_pem_key_cert_pair.c_pair, NULL)
+          c_pem_root_certificates, &ssl_pem_key_cert_pair.c_pair, NULL, NULL)
     credentials.references.append(ssl_pem_key_cert_pair)
   else:
     with nogil:
       credentials.c_credentials = grpc_ssl_credentials_create(
-        c_pem_root_certificates, NULL, NULL)
+        c_pem_root_certificates, NULL, NULL, NULL)
   return credentials
 
 def channel_credentials_composite(

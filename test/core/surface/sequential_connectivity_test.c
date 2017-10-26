@@ -159,7 +159,7 @@ static void secure_test_add_port(grpc_server *server, const char *addr) {
 
 static grpc_channel *secure_test_create_channel(const char *addr) {
   grpc_channel_credentials *ssl_creds =
-      grpc_ssl_credentials_create(test_root_cert, NULL, NULL);
+      grpc_ssl_credentials_create(test_root_cert, NULL, NULL, NULL);
   grpc_arg ssl_name_override = {GRPC_ARG_STRING,
                                 GRPC_SSL_TARGET_NAME_OVERRIDE_ARG,
                                 {"foo.test.google.fr"}};

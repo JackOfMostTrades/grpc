@@ -58,6 +58,9 @@ static void ssl_destruct(grpc_exec_ctx *exec_ctx,
   grpc_ssl_credentials *c = (grpc_ssl_credentials *)creds;
   gpr_free(c->config.pem_root_certs);
   ssl_config_pem_key_cert_pair_destroy(&c->config.pem_key_cert_pair);
+  if (c->config.verify_options.verify_peer_destruct != NULL) {
+    c->config.verify_options.verify_peer_destruct(c->config.verify_options.verify_peer_callback_userdata);
+  }
 }
 
 static grpc_security_status ssl_create_security_connector(
@@ -96,6 +99,7 @@ static grpc_channel_credentials_vtable ssl_vtable = {
 
 static void ssl_build_config(const char *pem_root_certs,
                              grpc_ssl_pem_key_cert_pair *pem_key_cert_pair,
+                             verify_peer_options *verify_options,
                              grpc_ssl_config *config) {
   if (pem_root_certs != NULL) {
     config->pem_root_certs = gpr_strdup(pem_root_certs);
@@ -108,22 +112,27 @@ static void ssl_build_config(const char *pem_root_certs,
     config->pem_key_cert_pair.private_key =
         gpr_strdup(pem_key_cert_pair->private_key);
   }
+  if (verify_options != NULL) {
+    memcpy(&config->verify_options, verify_options, sizeof(verify_peer_options));
+  }
 }
 
 grpc_channel_credentials *grpc_ssl_credentials_create(
     const char *pem_root_certs, grpc_ssl_pem_key_cert_pair *pem_key_cert_pair,
+    verify_peer_options *verify_options,
     void *reserved) {
   grpc_ssl_credentials *c = gpr_zalloc(sizeof(grpc_ssl_credentials));
   GRPC_API_TRACE(
       "grpc_ssl_credentials_create(pem_root_certs=%s, "
       "pem_key_cert_pair=%p, "
+      "verify_options=%p, "
       "reserved=%p)",
-      3, (pem_root_certs, pem_key_cert_pair, reserved));
+      4, (pem_root_certs, pem_key_cert_pair, verify_options, reserved));
   GPR_ASSERT(reserved == NULL);
   c->base.type = GRPC_CHANNEL_CREDENTIALS_TYPE_SSL;
   c->base.vtable = &ssl_vtable;
   gpr_ref_init(&c->base.refcount, 1);
-  ssl_build_config(pem_root_certs, pem_key_cert_pair, &c->config);
+  ssl_build_config(pem_root_certs, pem_key_cert_pair, verify_options, &c->config);
   return &c->base;
 }
 
