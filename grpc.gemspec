@@ -4,7 +4,7 @@ $LOAD_PATH.push File.expand_path('../src/ruby/lib', __FILE__)
 require 'grpc/version'
 
 Gem::Specification.new do |s|
-  s.name          = 'grpc'
+  s.name          = 'nflx-grpc'
   s.version       = GRPC::VERSION
   s.authors       = ['gRPC Authors']
   s.email         = 'temiola@google.com'
