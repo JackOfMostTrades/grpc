@@ -233,7 +233,7 @@ static VALUE grpc_rb_channel_credentials_init(int argc, VALUE *argv,
   const char *pem_root_certs_cstr = NULL;
   VALUE options_hash = Qnil;
   VALUE option_value = Qnil;
-  verify_peer_options vp_options = {NULL, NULL, NULL};
+  verify_peer_options vp_options = {NULL, NULL, NULL, false};
   MEMZERO(&key_cert_pair, grpc_ssl_pem_key_cert_pair, 1);
 
   grpc_ruby_once_init();
@@ -260,6 +260,11 @@ static VALUE grpc_rb_channel_credentials_init(int argc, VALUE *argv,
       // garbage collected by ruby (same as the PEM certs on the credentials object).
       vp_options.verify_peer_destruct = NULL;
       rb_ivar_set(self, id_check_server_identity_cb, option_value);
+    }
+
+    option_value = rb_hash_aref(options_hash, rb_str_new2("insecureSkipHostnameVerify"));
+    if (option_value != Qnil) {
+      vp_options.skip_hostname_verification = RTEST(option_value) ? 1 : 0;
     }
   }
   if (pem_private_key == Qnil && pem_cert_chain == Qnil) {
