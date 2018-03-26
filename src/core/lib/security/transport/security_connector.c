@@ -490,9 +490,9 @@ static void ssl_channel_add_handshakers(grpc_exec_ctx *exec_ctx,
   const char* server_name_indication;
 
   if (c->verify_options->skip_hostname_verification) {
-    server_name_indication = nullptr;
+    server_name_indication = NULL;
   } else {
-    server_name_indication = c->overridden_target_name != nullptr
+    server_name_indication = c->overridden_target_name != NULL
         ? c->overridden_target_name
         : c->target_name;
   }
