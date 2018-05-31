@@ -93,9 +93,10 @@ static void server_thread(void* arg) {
 
   gpr_log(GPR_INFO, "Shutting down server");
   grpc_server_shutdown_and_notify(server, cq, nullptr);
+  grpc_server_cancel_all_calls(server);
   grpc_completion_queue_shutdown(cq);
 
-  const gpr_timespec cq_deadline = grpc_timeout_seconds_to_deadline(5);
+  const gpr_timespec cq_deadline = grpc_timeout_seconds_to_deadline(60);
   grpc_event ev = grpc_completion_queue_next(cq, cq_deadline, nullptr);
   GPR_ASSERT(ev.type == GRPC_OP_COMPLETE);
 
@@ -183,7 +184,6 @@ static bool verify_peer_options_test(verify_peer_options* verify_options) {
   if (retries < 0) {
     success = false;
   }
-  gpr_event_set(&client_handshake_complete, &client_handshake_complete);
 
   grpc_channel_destroy(channel);
   grpc_channel_credentials_release(ssl_creds);
@@ -191,6 +191,9 @@ static bool verify_peer_options_test(verify_peer_options* verify_options) {
   grpc_slice_unref(key_slice);
   grpc_slice_unref(ca_slice);
 
+  // Now that the client is completely cleaned up, trigger the server to shutdown
+  gpr_event_set(&client_handshake_complete, &client_handshake_complete);
+  // Wait for the server to completely shutdown
   thd.Join();
 
   grpc_shutdown();
